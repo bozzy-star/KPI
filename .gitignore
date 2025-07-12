@@ -6,9 +6,8 @@ node_modules/
 # Testing
 /coverage
 
-# Next.js
+# Next.js (keep out/ for GitHub Pages)
 /.next/
-/out/
 
 # Production
 /build
