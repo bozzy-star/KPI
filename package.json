@@ -1,0 +1,23 @@
+{
+  "name": "kpi-tree-tool",
+  "version": "1.0.0",
+  "description": "インテリジェントKPIツリー作成ツール",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": ["kpi", "tree", "business", "analytics"],
+  "author": "Claude Code",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^24.0.13",
+    "@types/react": "^19.1.8",
+    "next": "^15.3.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3"
+  }
+}
