@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インテリジェントKPIツリー作成ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f8fafc;
+            min-height: 100vh;
+        }
+        
+        .header {
+            background-color: white;
+            border-bottom: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+        }
+        
+        .header-content {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 4rem;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #2563eb;
+            margin: 0;
+        }
+        
+        .subtitle {
+            margin-left: 1rem;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .header-buttons {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .btn {
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-secondary {
+            border: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        .btn-primary {
+            background-color: #2563eb;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .btn:disabled {
+            background-color: #f1f5f9;
+            cursor: not-allowed;
+        }
+        
+        .main-container {
+            display: flex;
+            height: calc(100vh - 4rem);
+        }
+        
+        .canvas-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        
+        .empty-content {
+            text-align: center;
+        }
+        
+        .empty-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+        
+        .empty-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: #0f172a;
+        }
+        
+        .empty-text {
+            color: #64748b;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+        }
+        
+        .btn-add-root {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            background-color: #2563eb;
+            color: white;
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .btn-add-root:hover {
+            background-color: #1d4ed8;
+        }
+        
+        .canvas {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: #f9fafb;
+        }
+        
+        .canvas-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            min-width: 1200px;
+            min-height: 800px;
+        }
+        
+        .connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .node {
+            position: absolute;
+            width: 200px;
+            min-height: 80px;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            border: 2px solid #e2e8f0;
+            cursor: pointer;
+            z-index: 2;
+            transition: all 0.2s ease;
+        }
+        
+        .node.selected {
+            border-color: #2563eb;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
+        
+        .node-content {
+            padding: 0.75rem;
+        }
+        
+        .node-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.25rem;
+            color: #2563eb;
+        }
+        
+        .node-description {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .node-values {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.75rem;
+        }
+        
+        .node-value {
+            color: #10b981;
+            font-weight: 500;
+        }
+        
+        .node-target {
+            color: #f59e0b;
+            font-weight: 500;
+        }
+        
+        .node-formula {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 0.25rem;
+            font-style: italic;
+        }
+        
+        .add-child-btn {
+            position: absolute;
+            bottom: -0.75rem;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1.5rem;
+            height: 1.5rem;
+            background-color: #2563eb;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .hint-panel {
+            width: 320px;
+            border-left: 1px solid #e2e8f0;
+            background-color: white;
+            overflow-y: auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .hint-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .hint-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+            margin: 0;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        .node-info {
+            padding: 1rem;
+            background-color: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .node-info-name {
+            font-weight: 500;
+            color: #2563eb;
+            margin-bottom: 0.25rem;
+        }
+        
+        .node-info-desc {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .hints-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .hints-subtitle {
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+        }
+        
+        .hint-item {
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 0.75rem;
+            cursor: pointer;
+            background-color: white;
+        }
+        
+        .hint-item.selected {
+            background-color: #f8fafc;
+        }
+        
+        .hint-header-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+        
+        .hint-name {
+            font-weight: 500;
+            color: #2563eb;
+        }
+        
+        .hint-category {
+            font-size: 0.75rem;
+            padding: 0.125rem 0.5rem;
+            background-color: #2563eb;
+            color: white;
+            border-radius: 0.25rem;
+        }
+        
+        .hint-description {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
+        
+        .hint-formula {
+            font-size: 0.75rem;
+            color: #2563eb;
+            font-family: monospace;
+            background-color: #f8fafc;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+        }
+        
+        .hint-details {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .hint-examples-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .hint-examples {
+            font-size: 0.875rem;
+            color: #64748b;
+            padding-left: 1rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .hint-examples li {
+            margin-bottom: 0.25rem;
+        }
+        
+        .btn-add-hint {
+            width: 100%;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+            border: none;
+            cursor: pointer;
+            background-color: #2563eb;
+            color: white;
+        }
+        
+        .no-hints {
+            text-align: center;
+            color: #64748b;
+            padding: 1rem;
+        }
+        
+        .no-hints-icon {
+            font-size: 2rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .no-hints-text {
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .btn-manual-add {
+            margin-top: 0.75rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            font-size: 0.75rem;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        .hint-footer {
+            padding: 1rem;
+            border-top: 1px solid #e2e8f0;
+            background-color: #f8fafc;
+        }
+        
+        .hint-tip {
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            max-width: 28rem;
+            width: 100%;
+            margin: 1rem;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .modal-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+        }
+        
+        .calculation-assistant {
+            background-color: #f8fafc;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        .calculation-title {
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+        
+        .calculation-description {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 0.75rem;
+        }
+        
+        .calculation-screen {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        
+        .calculation-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        
+        .calculation-step-title {
+            font-weight: 500;
+        }
+        
+        .calculation-step-desc {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+        
+        .calculation-example {
+            background-color: #dbeafe;
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        
+        .calculation-example-text {
+            font-size: 0.875rem;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 0.75rem;
+            padding: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .btn-flex {
+            flex: 1;
+        }
+        
+        .btn-cancel {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        .btn-save {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            background-color: #2563eb;
+            color: white;
+        }
+        
+        .btn-back {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        
+        .btn-calculate {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            background-color: #2563eb;
+            color: white;
+        }
+        
+        .btn-calculate:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="header-left">
+                <h1 class="title">インテリジェントKPIツリー</h1>
+                <span class="subtitle" id="tree-name"></span>
+            </div>
+            <div class="header-buttons">
+                <button class="btn btn-secondary" id="btn-settings" disabled>数値設定</button>
+                <button class="btn btn-primary">レポート生成</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <!-- メインキャンバス -->
+        <div class="canvas-container">
+            <div id="empty-state" class="empty-state">
+                <div class="empty-content">
+                    <div class="empty-icon">🌳</div>
+                    <h2 class="empty-title">KPIツリーを作成しましょう</h2>
+                    <p class="empty-text">最初のKPIを追加してツリーの構築を開始します</p>
+                    <button class="btn-add-root" id="btn-add-root">ルートKPIを追加</button>
+                </div>
+            </div>
+            <div id="canvas" class="canvas hidden">
+                <div class="canvas-content">
+                    <svg class="connections" id="connections"></svg>
+                    <div id="nodes-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ヒントパネル -->
+        <div id="hint-panel" class="hint-panel hidden">
+            <div class="hint-header">
+                <h3 class="hint-title">KPIヒント</h3>
+                <button class="close-btn" id="close-hints">✕</button>
+            </div>
+            <div class="node-info">
+                <div class="node-info-name" id="selected-node-name"></div>
+                <div class="node-info-desc" id="selected-node-desc"></div>
+            </div>
+            <div class="hints-content">
+                <div class="hints-subtitle" id="hints-subtitle"></div>
+                <div id="hints-list"></div>
+                <div id="no-hints" class="no-hints hidden">
+                    <div class="no-hints-icon">💡</div>
+                    <div class="no-hints-text">
+                        このKPIのヒントは現在準備中です。<br/>
+                        手動で子KPIを追加することができます。
+                    </div>
+                    <button class="btn-manual-add" id="btn-manual-add">手動でKPIを追加</button>
+                </div>
+            </div>
+            <div class="hint-footer">
+                <div class="hint-tip">💡 ヒント: KPIをダブルクリックして名前を編集できます</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 数値入力ダイアログ -->
+    <div id="value-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modal-title">数値設定</h3>
+                <button class="close-btn" id="close-modal">✕</button>
+            </div>
+            <div id="value-form" class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">目標値</label>
+                    <input type="number" class="form-input" id="target-input" placeholder="目標値を入力">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">実績値</label>
+                    <input type="number" class="form-input" id="value-input" placeholder="現在の実績値を入力">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">単位</label>
+                    <input type="text" class="form-input" id="unit-input" placeholder="例: 円、件、人">
+                </div>
+                <div class="calculation-assistant">
+                    <div class="calculation-title">🤖 インテリジェント計算</div>
+                    <div class="calculation-description">上位KPIの情報から自動的に目標値を算出します</div>
+                    <button class="btn btn-secondary" id="btn-calculation">計算アシスタントを使用</button>
+                </div>
+            </div>
+            <div id="calculation-form" class="modal-body hidden">
+                <div class="calculation-screen">
+                    <div class="calculation-icon">🧮</div>
+                    <div class="calculation-step-title">インテリジェント計算</div>
+                    <div class="calculation-step-desc">いくつかの質問にお答えください</div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="parent-question">上位KPIの目標値はいくらですか？</label>
+                    <input type="number" class="form-input" id="parent-value" placeholder="例: 5000万円の場合は 50000000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" id="child-question">過去の平均値はいくらでしたか？</label>
+                    <input type="number" class="form-input" id="child-estimate" placeholder="例: 平均単価50万円の場合は 500000">
+                </div>
+                <div class="calculation-example">
+                    <div class="calculation-example-text">💡 計算例: 売上5000万円 ÷ 平均単価50万円 = 目標件数100件</div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn-back btn-flex" id="btn-back">戻る</button>
+                    <button class="btn-calculate btn-flex" id="btn-calculate" disabled>計算実行</button>
+                </div>
+            </div>
+            <div id="value-footer" class="modal-footer">
+                <button class="btn-cancel btn-flex" id="btn-cancel">キャンセル</button>
+                <button class="btn-save btn-flex" id="btn-save">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // KPIヒントデータ
+        const kpiHints = {
+            '売上': [
+                {
+                    id: 'customers',
+                    name: '顧客数',
+                    description: '売上を生み出す顧客の総数。新規・既存に分けて管理することが重要です。',
+                    formula: '売上 = 顧客数 × 顧客単価',
+                    examples: ['月間アクティブユーザー数', '契約企業数', '会員数'],
+                    category: 'customer'
+                },
+                {
+                    id: 'customer_price',
+                    name: '顧客単価',
+                    description: '一人の顧客が平均的に支払う金額。LTV（顧客生涯価値）の基礎となります。',
+                    formula: '売上 = 顧客数 × 顧客単価',
+                    examples: ['ARPU（Average Revenue Per User）', '平均注文金額', '契約単価'],
+                    category: 'revenue'
+                },
+                {
+                    id: 'contracts',
+                    name: '成約数',
+                    description: '実際に契約や購入に至った件数。成約率と組み合わせて分析します。',
+                    formula: '売上 = 成約数 × 平均契約金額',
+                    examples: ['月間成約件数', '新規契約数', 'オーダー数'],
+                    category: 'revenue'
+                }
+            ],
+            '顧客数': [
+                {
+                    id: 'new_customers',
+                    name: '新規顧客数',
+                    description: '新たに獲得した顧客の数。成長の原動力となる重要指標です。',
+                    formula: '顧客数 = 新規顧客数 + 既存顧客数',
+                    examples: ['月間新規登録数', '新規契約企業数', '初回購入者数'],
+                    category: 'customer'
+                },
+                {
+                    id: 'existing_customers',
+                    name: '既存顧客数',
+                    description: '継続利用している顧客の数。リテンション率と密接に関係します。',
+                    formula: '顧客数 = 新規顧客数 + 既存顧客数',
+                    examples: ['アクティブユーザー数', '継続契約数', 'リピーター数'],
+                    category: 'customer'
+                }
+            ],
+            '成約数': [
+                {
+                    id: 'proposals',
+                    name: '提案数',
+                    description: '顧客に対して行った提案の数。商談機会の創出力を表します。',
+                    formula: '成約数 = 提案数 × 提案成約率',
+                    examples: ['見積提出数', 'プレゼン実施数', '商談数'],
+                    category: 'marketing'
+                }
+            ]
+        };
+
+        // アプリケーション状態
+        let kpiTree = null;
+        let selectedNode = null;
+        let draggedNode = null;
+        let dragOffset = { x: 0, y: 0 };
+        let selectedHintId = null;
+        let calculationStep = 0;
+        let calculationData = { parentValue: '', childEstimate: '' };
+
+        // DOM要素の取得
+        const elements = {
+            emptyState: document.getElementById('empty-state'),
+            canvas: document.getElementById('canvas'),
+            nodesContainer: document.getElementById('nodes-container'),
+            connections: document.getElementById('connections'),
+            hintPanel: document.getElementById('hint-panel'),
+            valueModal: document.getElementById('value-modal'),
+            treeName: document.getElementById('tree-name'),
+            btnAddRoot: document.getElementById('btn-add-root'),
+            btnSettings: document.getElementById('btn-settings'),
+            closeHints: document.getElementById('close-hints'),
+            closeModal: document.getElementById('close-modal'),
+            selectedNodeName: document.getElementById('selected-node-name'),
+            selectedNodeDesc: document.getElementById('selected-node-desc'),
+            hintsSubtitle: document.getElementById('hints-subtitle'),
+            hintsList: document.getElementById('hints-list'),
+            noHints: document.getElementById('no-hints'),
+            btnManualAdd: document.getElementById('btn-manual-add'),
+            modalTitle: document.getElementById('modal-title'),
+            valueForm: document.getElementById('value-form'),
+            calculationForm: document.getElementById('calculation-form'),
+            valueFooter: document.getElementById('value-footer'),
+            targetInput: document.getElementById('target-input'),
+            valueInput: document.getElementById('value-input'),
+            unitInput: document.getElementById('unit-input'),
+            btnCalculation: document.getElementById('btn-calculation'),
+            parentQuestion: document.getElementById('parent-question'),
+            childQuestion: document.getElementById('child-question'),
+            parentValue: document.getElementById('parent-value'),
+            childEstimate: document.getElementById('child-estimate'),
+            btnBack: document.getElementById('btn-back'),
+            btnCalculate: document.getElementById('btn-calculate'),
+            btnCancel: document.getElementById('btn-cancel'),
+            btnSave: document.getElementById('btn-save')
+        };
+
+        // ユーティリティ関数
+        function generateId() {
+            return 'node-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function getCategoryLabel(category) {
+            const labels = { customer: '顧客', revenue: '売上', marketing: 'マーケ' };
+            return labels[category] || category;
+        }
+
+        // KPIツリー操作関数
+        function addRootNode() {
+            const rootNode = {
+                id: 'root',
+                name: '売上',
+                level: 0,
+                x: 400,
+                y: 100,
+                children: [],
+                description: 'ビジネスの主要目標指標'
+            };
+
+            kpiTree = {
+                id: 'tree-1',
+                name: '新規KPIツリー',
+                nodes: { root: rootNode },
+                rootNodeId: 'root'
+            };
+
+            selectedNode = rootNode;
+            renderTree();
+            showHints();
+            
+            elements.treeName.textContent = kpiTree.name;
+            elements.btnSettings.disabled = false;
+        }
+
+        function addChildNode(parentId, childData) {
+            if (!kpiTree) return;
+
+            const childId = generateId();
+            const parentNode = kpiTree.nodes[parentId];
+            
+            const childNode = {
+                id: childId,
+                name: childData.name || '新しいKPI',
+                level: parentNode.level + 1,
+                x: parentNode.x + (parentNode.children.length * 200) - 100,
+                y: parentNode.y + 150,
+                children: [],
+                parent: parentId,
+                description: childData.description,
+                formula: childData.formula
+            };
+
+            parentNode.children.push(childId);
+            kpiTree.nodes[childId] = childNode;
+
+            selectedNode = childNode;
+            renderTree();
+            showHints();
+        }
+
+        function updateNode(nodeId, updates) {
+            if (!kpiTree || !kpiTree.nodes[nodeId]) return;
+            
+            Object.assign(kpiTree.nodes[nodeId], updates);
+            renderTree();
+        }
+
+        function selectNode(node) {
+            selectedNode = node;
+            renderTree();
+            showHints();
+        }
+
+        // レンダリング関数
+        function renderTree() {
+            if (!kpiTree || Object.keys(kpiTree.nodes).length === 0) {
+                elements.emptyState.classList.remove('hidden');
+                elements.canvas.classList.add('hidden');
+                elements.hintPanel.classList.add('hidden');
+                return;
+            }
+
+            elements.emptyState.classList.add('hidden');
+            elements.canvas.classList.remove('hidden');
+
+            renderConnections();
+            renderNodes();
+        }
+
+        function renderConnections() {
+            const svg = elements.connections;
+            svg.innerHTML = '';
+
+            Object.values(kpiTree.nodes).forEach(parent => {
+                parent.children.forEach(childId => {
+                    const child = kpiTree.nodes[childId];
+                    if (!child) return;
+
+                    const parentCenterX = parent.x + 100;
+                    const parentCenterY = parent.y + 40;
+                    const childCenterX = child.x + 100;
+                    const childCenterY = child.y + 40;
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', parentCenterX);
+                    line.setAttribute('y1', parentCenterY);
+                    line.setAttribute('x2', childCenterX);
+                    line.setAttribute('y2', childCenterY);
+                    line.setAttribute('stroke', '#e2e8f0');
+                    line.setAttribute('stroke-width', '2');
+
+                    const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    arrow.setAttribute('points', `${childCenterX-5},${childCenterY-5} ${childCenterX+5},${childCenterY-5} ${childCenterX},${childCenterY+5}`);
+                    arrow.setAttribute('fill', '#e2e8f0');
+
+                    svg.appendChild(line);
+                    svg.appendChild(arrow);
+                });
+            });
+        }
+
+        function renderNodes() {
+            const container = elements.nodesContainer;
+            container.innerHTML = '';
+
+            Object.values(kpiTree.nodes).forEach(node => {
+                const nodeElement = createNodeElement(node);
+                container.appendChild(nodeElement);
+            });
+        }
+
+        function createNodeElement(node) {
+            const isSelected = selectedNode?.id === node.id;
+            
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = `node ${isSelected ? 'selected' : ''}`;
+            nodeDiv.style.left = node.x + 'px';
+            nodeDiv.style.top = node.y + 'px';
+
+            const values = [];
+            if (node.value) values.push(`<div class="node-value">実績: ${node.value}${node.unit || ''}</div>`);
+            if (node.target) values.push(`<div class="node-target">目標: ${node.target}${node.unit || ''}</div>`);
+
+            nodeDiv.innerHTML = `
+                <div class="node-content">
+                    <div class="node-name">${node.name}</div>
+                    ${node.description ? `<div class="node-description">${node.description}</div>` : ''}
+                    ${values.length > 0 ? `<div class="node-values">${values.join('')}</div>` : ''}
+                    ${node.formula ? `<div class="node-formula">${node.formula}</div>` : ''}
+                </div>
+                <button class="add-child-btn" title="子KPIを追加">+</button>
+            `;
+
+            // イベントリスナー
+            nodeDiv.addEventListener('click', () => selectNode(node));
+            nodeDiv.addEventListener('dblclick', () => editNodeName(node));
+            nodeDiv.addEventListener('mousedown', (e) => startDrag(e, node.id));
+
+            const addBtn = nodeDiv.querySelector('.add-child-btn');
+            addBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const name = prompt('KPI名を入力してください:');
+                if (name) {
+                    addChildNode(node.id, { name });
+                }
+            });
+
+            return nodeDiv;
+        }
+
+        // ヒントパネル関数
+        function showHints() {
+            if (!selectedNode) {
+                elements.hintPanel.classList.add('hidden');
+                return;
+            }
+
+            elements.hintPanel.classList.remove('hidden');
+            elements.selectedNodeName.textContent = selectedNode.name;
+            elements.selectedNodeDesc.textContent = selectedNode.description || '';
+            elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補:`;
+
+            const hints = kpiHints[selectedNode.name] || [];
+            renderHints(hints);
+        }
+
+        function renderHints(hints) {
+            const container = elements.hintsList;
+            container.innerHTML = '';
+
+            if (hints.length === 0) {
+                elements.noHints.classList.remove('hidden');
+                return;
+            }
+
+            elements.noHints.classList.add('hidden');
+
+            hints.forEach(hint => {
+                const hintElement = createHintElement(hint);
+                container.appendChild(hintElement);
+            });
+        }
+
+        function createHintElement(hint) {
+            const isSelected = selectedHintId === hint.id;
+            
+            const hintDiv = document.createElement('div');
+            hintDiv.className = `hint-item ${isSelected ? 'selected' : ''}`;
+
+            const examples = hint.examples.map(ex => `<li>${ex}</li>`).join('');
+
+            hintDiv.innerHTML = `
+                <div class="hint-header-row">
+                    <div class="hint-name">${hint.name}</div>
+                    <div class="hint-category">${getCategoryLabel(hint.category)}</div>
+                </div>
+                <div class="hint-description">${hint.description}</div>
+                <div class="hint-formula">${hint.formula}</div>
+                ${isSelected ? `
+                    <div class="hint-details">
+                        <div class="hint-examples-title">具体例:</div>
+                        <ul class="hint-examples">${examples}</ul>
+                        <button class="btn-add-hint">このKPIを追加</button>
+                    </div>
+                ` : ''}
+            `;
+
+            hintDiv.addEventListener('click', () => {
+                selectedHintId = selectedHintId === hint.id ? null : hint.id;
+                renderHints(kpiHints[selectedNode.name] || []);
+            });
+
+            if (isSelected) {
+                const addBtn = hintDiv.querySelector('.btn-add-hint');
+                addBtn.addEventListener('click', () => {
+                    addChildNode(selectedNode.id, hint);
+                    selectedHintId = null;
+                });
+            }
+
+            return hintDiv;
+        }
+
+        // ドラッグ機能
+        function startDrag(e, nodeId) {
+            draggedNode = nodeId;
+            const rect = e.currentTarget.getBoundingClientRect();
+            dragOffset = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        function handleMouseMove(e) {
+            if (!draggedNode) return;
+            
+            const rect = elements.canvas.getBoundingClientRect();
+            const newX = e.clientX - rect.left - dragOffset.x;
+            const newY = e.clientY - rect.top - dragOffset.y;
+
+            updateNode(draggedNode, { x: newX, y: newY });
+        }
+
+        function handleMouseUp() {
+            draggedNode = null;
+        }
+
+        // モーダル関数
+        function showValueModal() {
+            if (!selectedNode) return;
+
+            elements.modalTitle.textContent = `数値設定 - ${selectedNode.name}`;
+            elements.targetInput.value = selectedNode.target || '';
+            elements.valueInput.value = selectedNode.value || '';
+            elements.unitInput.value = selectedNode.unit || '';
+            
+            showValueForm();
+            elements.valueModal.classList.remove('hidden');
+        }
+
+        function hideValueModal() {
+            elements.valueModal.classList.add('hidden');
+            calculationStep = 0;
+            calculationData = { parentValue: '', childEstimate: '' };
+        }
+
+        function showValueForm() {
+            elements.valueForm.classList.remove('hidden');
+            elements.calculationForm.classList.add('hidden');
+            elements.valueFooter.classList.remove('hidden');
+        }
+
+        function showCalculationForm() {
+            elements.valueForm.classList.add('hidden');
+            elements.calculationForm.classList.remove('hidden');
+            elements.valueFooter.classList.add('hidden');
+
+            const parentNode = selectedNode.parent ? kpiTree.nodes[selectedNode.parent] : null;
+            const parentName = parentNode ? parentNode.name : '売上';
+            
+            elements.parentQuestion.textContent = `上位KPI「${parentName}」の目標値はいくらですか？`;
+            elements.childQuestion.textContent = `過去の「${selectedNode.name}」の平均値はいくらでしたか？`;
+        }
+
+        function calculateValue() {
+            const parentVal = parseFloat(calculationData.parentValue);
+            const childEst = parseFloat(calculationData.childEstimate);
+            
+            if (parentVal && childEst) {
+                const calculated = Math.round(parentVal / childEst);
+                updateNode(selectedNode.id, { target: calculated });
+                hideValueModal();
+            }
+        }
+
+        function editNodeName(node) {
+            const newName = prompt('KPI名を入力してください:', node.name);
+            if (newName && newName !== node.name) {
+                updateNode(node.id, { name: newName });
+            }
+        }
+
+        // イベントリスナーの設定
+        function setupEventListeners() {
+            // ボタンイベント
+            elements.btnAddRoot.addEventListener('click', addRootNode);
+            elements.btnSettings.addEventListener('click', showValueModal);
+            elements.closeHints.addEventListener('click', () => elements.hintPanel.classList.add('hidden'));
+            elements.closeModal.addEventListener('click', hideValueModal);
+            elements.btnManualAdd.addEventListener('click', () => {
+                const name = prompt('KPI名を入力してください:');
+                if (name) {
+                    addChildNode(selectedNode.id, { name });
+                }
+            });
+
+            // モーダルイベント
+            elements.btnCalculation.addEventListener('click', showCalculationForm);
+            elements.btnBack.addEventListener('click', showValueForm);
+            elements.btnCancel.addEventListener('click', hideValueModal);
+            elements.btnSave.addEventListener('click', () => {
+                updateNode(selectedNode.id, {
+                    target: parseFloat(elements.targetInput.value) || undefined,
+                    value: parseFloat(elements.valueInput.value) || undefined,
+                    unit: elements.unitInput.value || undefined
+                });
+                hideValueModal();
+            });
+
+            // 計算フォームイベント
+            elements.parentValue.addEventListener('input', (e) => {
+                calculationData.parentValue = e.target.value;
+                updateCalculateButton();
+            });
+            elements.childEstimate.addEventListener('input', (e) => {
+                calculationData.childEstimate = e.target.value;
+                updateCalculateButton();
+            });
+            elements.btnCalculate.addEventListener('click', calculateValue);
+
+            // 数値入力フォームイベント
+            elements.targetInput.addEventListener('input', (e) => {
+                if (selectedNode) {
+                    updateNode(selectedNode.id, { target: parseFloat(e.target.value) || undefined });
+                }
+            });
+            elements.valueInput.addEventListener('input', (e) => {
+                if (selectedNode) {
+                    updateNode(selectedNode.id, { value: parseFloat(e.target.value) || undefined });
+                }
+            });
+            elements.unitInput.addEventListener('input', (e) => {
+                if (selectedNode) {
+                    updateNode(selectedNode.id, { unit: e.target.value || undefined });
+                }
+            });
+
+            // ドラッグイベント
+            elements.canvas.addEventListener('mousemove', handleMouseMove);
+            elements.canvas.addEventListener('mouseup', handleMouseUp);
+            elements.canvas.addEventListener('mouseleave', handleMouseUp);
+
+            // モーダルオーバーレイクリック
+            elements.valueModal.addEventListener('click', (e) => {
+                if (e.target === elements.valueModal) {
+                    hideValueModal();
+                }
+            });
+        }
+
+        function updateCalculateButton() {
+            const hasValues = calculationData.parentValue && calculationData.childEstimate;
+            elements.btnCalculate.disabled = !hasValues;
+        }
+
+        // 初期化
+        function init() {
+            setupEventListeners();
+            renderTree();
+        }
+
+        // DOMContentLoadedイベントで初期化
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
