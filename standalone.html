@@ -619,6 +619,241 @@
         .hidden {
             display: none;
         }
+
+        /* 質問モーダルスタイル */
+        .questionnaire-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .questionnaire-content {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+            max-width: 32rem;
+            width: 100%;
+            margin: 1rem;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .questionnaire-header {
+            padding: 2rem 2rem 1rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .questionnaire-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .questionnaire-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+
+        .questionnaire-subtitle {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+
+        .questionnaire-body {
+            padding: 2rem;
+        }
+
+        .question-container {
+            margin-bottom: 2rem;
+        }
+
+        .question-number {
+            font-size: 0.875rem;
+            color: #2563eb;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+        }
+
+        .question-text {
+            font-size: 1.125rem;
+            font-weight: 500;
+            margin-bottom: 1rem;
+            color: #0f172a;
+        }
+
+        .answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .answer-option {
+            padding: 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: white;
+        }
+
+        .answer-option:hover {
+            border-color: #2563eb;
+            background-color: #f8fafc;
+        }
+
+        .answer-option.selected {
+            border-color: #2563eb;
+            background-color: #dbeafe;
+        }
+
+        .answer-title {
+            font-weight: 500;
+            color: #0f172a;
+            margin-bottom: 0.25rem;
+        }
+
+        .answer-description {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .form-input-large {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .form-input-large:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        .questionnaire-navigation {
+            display: flex;
+            justify-content: space-between;
+            padding: 1.5rem 2rem;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .btn-nav {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-nav-back {
+            border: 1px solid #e2e8f0;
+            background-color: white;
+            color: #0f172a;
+        }
+
+        .btn-nav-back:hover {
+            background-color: #f8fafc;
+        }
+
+        .btn-nav-next {
+            border: none;
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .btn-nav-next:hover {
+            background-color: #1d4ed8;
+        }
+
+        .btn-nav-next:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .progress-bar {
+            height: 4px;
+            background-color: #e2e8f0;
+            margin-bottom: 2rem;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #2563eb;
+            transition: width 0.3s ease;
+        }
+
+        .generating-screen {
+            text-align: center;
+            padding: 3rem 2rem;
+        }
+
+        .generating-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: spin 2s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .generating-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: #0f172a;
+        }
+
+        .generating-subtitle {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+
+        .generating-steps {
+            text-align: left;
+            max-width: 24rem;
+            margin: 0 auto;
+        }
+
+        .generating-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            background-color: #f8fafc;
+        }
+
+        .generating-step.active {
+            background-color: #dbeafe;
+            border: 1px solid #2563eb;
+        }
+
+        .generating-step.completed {
+            background-color: #dcfce7;
+            border: 1px solid #16a34a;
+        }
+
+        .step-icon {
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        .step-text {
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -678,6 +913,56 @@
             </div>
             <div class="hint-footer">
                 <div class="hint-tip">💡 ヒント: KPIをダブルクリックして名前を編集できます</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 質問モーダル -->
+    <div id="questionnaire-modal" class="questionnaire-modal hidden">
+        <div class="questionnaire-content">
+            <div class="questionnaire-header">
+                <div class="questionnaire-icon">🎯</div>
+                <h2 class="questionnaire-title">KPIツリー作成アシスタント</h2>
+                <p class="questionnaire-subtitle">いくつかの質問にお答えいただき、最適なKPIツリーを自動生成します</p>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <div id="questionnaire-content">
+                <!-- 質問コンテンツがここに動的に挿入されます -->
+            </div>
+
+            <div class="questionnaire-navigation">
+                <button class="btn-nav btn-nav-back" id="btn-prev-question" style="visibility: hidden;">戻る</button>
+                <button class="btn-nav btn-nav-next" id="btn-next-question" disabled>次へ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 生成中画面 -->
+    <div id="generating-modal" class="questionnaire-modal hidden">
+        <div class="questionnaire-content">
+            <div class="generating-screen">
+                <div class="generating-icon">⚙️</div>
+                <h2 class="generating-title">KPIツリーを生成中...</h2>
+                <p class="generating-subtitle">回答内容を分析し、最適なKPIツリーを作成しています</p>
+                
+                <div class="generating-steps">
+                    <div class="generating-step completed" id="step-analyze">
+                        <div class="step-icon">✅</div>
+                        <div class="step-text">回答内容を分析</div>
+                    </div>
+                    <div class="generating-step active" id="step-generate">
+                        <div class="step-icon">⚙️</div>
+                        <div class="step-text">KPIツリーを生成</div>
+                    </div>
+                    <div class="generating-step" id="step-complete">
+                        <div class="step-icon">🌳</div>
+                        <div class="step-text">ツリーを表示</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -936,6 +1221,161 @@
             ]
         };
 
+        // 質問データ
+        const questionnaire = [
+            {
+                id: 'business_type',
+                type: 'choice',
+                question: 'あなたのビジネスタイプを教えてください',
+                options: [
+                    {
+                        value: 'ecommerce',
+                        title: 'Eコマース・オンライン販売',
+                        description: '商品をオンラインで販売している'
+                    },
+                    {
+                        value: 'saas',
+                        title: 'SaaS・ソフトウェアサービス',
+                        description: 'サブスクリプション型のソフトウェアを提供'
+                    },
+                    {
+                        value: 'retail',
+                        title: '小売・実店舗',
+                        description: '実店舗で商品を販売している'
+                    },
+                    {
+                        value: 'service',
+                        title: 'サービス業・コンサルティング',
+                        description: '無形のサービスを提供している'
+                    },
+                    {
+                        value: 'manufacturing',
+                        title: '製造業',
+                        description: '商品を製造・生産している'
+                    },
+                    {
+                        value: 'other',
+                        title: 'その他',
+                        description: '上記に当てはまらない業種'
+                    }
+                ]
+            },
+            {
+                id: 'primary_goal',
+                type: 'choice',
+                question: '現在の主要な経営目標は何ですか？',
+                options: [
+                    {
+                        value: 'revenue_growth',
+                        title: '売上・収益の増加',
+                        description: '売上を拡大したい'
+                    },
+                    {
+                        value: 'customer_acquisition',
+                        title: '新規顧客の獲得',
+                        description: '顧客数を増やしたい'
+                    },
+                    {
+                        value: 'customer_retention',
+                        title: '既存顧客の維持',
+                        description: '顧客の継続率を高めたい'
+                    },
+                    {
+                        value: 'efficiency',
+                        title: '業務効率の改善',
+                        description: 'コストを削減し効率を上げたい'
+                    },
+                    {
+                        value: 'market_expansion',
+                        title: '市場拡大・新規事業',
+                        description: '新しい市場や事業に進出したい'
+                    }
+                ]
+            },
+            {
+                id: 'company_stage',
+                type: 'choice',
+                question: '会社の成長ステージはどれに当てはまりますか？',
+                options: [
+                    {
+                        value: 'startup',
+                        title: 'スタートアップ（創業期）',
+                        description: '事業を立ち上げたばかり'
+                    },
+                    {
+                        value: 'growth',
+                        title: '成長期',
+                        description: '事業が軌道に乗り拡大中'
+                    },
+                    {
+                        value: 'mature',
+                        title: '成熟期',
+                        description: '安定した収益基盤がある'
+                    },
+                    {
+                        value: 'transformation',
+                        title: '変革期',
+                        description: 'ビジネスモデルを変化させている'
+                    }
+                ]
+            },
+            {
+                id: 'team_size',
+                type: 'choice',
+                question: 'チーム・組織の規模を教えてください',
+                options: [
+                    {
+                        value: 'solo',
+                        title: '個人事業・1人',
+                        description: '一人で事業を運営'
+                    },
+                    {
+                        value: 'small',
+                        title: '小規模チーム（2-10人）',
+                        description: '少数精鋭のチーム'
+                    },
+                    {
+                        value: 'medium',
+                        title: '中規模組織（11-50人）',
+                        description: '部門が分かれ始めている'
+                    },
+                    {
+                        value: 'large',
+                        title: '大規模組織（51人以上）',
+                        description: '複数部門がある組織'
+                    }
+                ]
+            },
+            {
+                id: 'timeframe',
+                type: 'choice',
+                question: 'KPIで管理したい期間はどれですか？',
+                options: [
+                    {
+                        value: 'monthly',
+                        title: '月次管理',
+                        description: '毎月の進捗を細かく管理したい'
+                    },
+                    {
+                        value: 'quarterly',
+                        title: '四半期管理',
+                        description: '3ヶ月単位で管理したい'
+                    },
+                    {
+                        value: 'annual',
+                        title: '年次管理',
+                        description: '年単位での目標管理をしたい'
+                    }
+                ]
+            },
+            {
+                id: 'specific_focus',
+                type: 'text',
+                question: '特に重視したい指標や改善したい課題があれば教えてください',
+                placeholder: '例：顧客単価を上げたい、離脱率を下げたい、新規チャネルを開拓したい など'
+            }
+        ];
+
         // アプリケーション状態
         let kpiTree = null;
         let selectedNode = null;
@@ -944,6 +1384,11 @@
         let selectedHintId = null;
         let calculationStep = 0;
         let calculationData = { parentValue: '', childEstimate: '' };
+        
+        // 質問フロー関連の状態
+        let currentQuestionIndex = 0;
+        let questionnaireAnswers = {};
+        let isQuestionnairMode = false;
 
         // DOM要素の取得
         const elements = {
@@ -979,7 +1424,15 @@
             btnBack: document.getElementById('btn-back'),
             btnCalculate: document.getElementById('btn-calculate'),
             btnCancel: document.getElementById('btn-cancel'),
-            btnSave: document.getElementById('btn-save')
+            btnSave: document.getElementById('btn-save'),
+            
+            // 質問モーダル関連
+            questionnaireModal: document.getElementById('questionnaire-modal'),
+            generatingModal: document.getElementById('generating-modal'),
+            questionnaireContent: document.getElementById('questionnaire-content'),
+            progressFill: document.getElementById('progress-fill'),
+            btnPrevQuestion: document.getElementById('btn-prev-question'),
+            btnNextQuestion: document.getElementById('btn-next-question')
         };
 
         // ユーティリティ関数
@@ -997,6 +1450,266 @@
                 cost: 'コスト'
             };
             return labels[category] || category;
+        }
+
+        // 質問フロー関数
+        function startQuestionnaire() {
+            isQuestionnairMode = true;
+            currentQuestionIndex = 0;
+            questionnaireAnswers = {};
+            
+            elements.questionnaireModal.classList.remove('hidden');
+            showQuestion(currentQuestionIndex);
+        }
+
+        function showQuestion(index) {
+            const question = questionnaire[index];
+            const progress = ((index + 1) / questionnaire.length) * 100;
+            
+            elements.progressFill.style.width = progress + '%';
+            
+            if (question.type === 'choice') {
+                renderChoiceQuestion(question, index);
+            } else if (question.type === 'text') {
+                renderTextQuestion(question, index);
+            }
+            
+            // ナビゲーションボタンの状態更新
+            elements.btnPrevQuestion.style.visibility = index > 0 ? 'visible' : 'hidden';
+            elements.btnNextQuestion.textContent = index === questionnaire.length - 1 ? 'KPIツリーを生成' : '次へ';
+            updateNextButton();
+        }
+
+        function renderChoiceQuestion(question, index) {
+            const options = question.options.map(option => `
+                <div class="answer-option" data-value="${option.value}">
+                    <div class="answer-title">${option.title}</div>
+                    <div class="answer-description">${option.description}</div>
+                </div>
+            `).join('');
+
+            elements.questionnaireContent.innerHTML = `
+                <div class="questionnaire-body">
+                    <div class="question-container">
+                        <div class="question-number">質問 ${index + 1} / ${questionnaire.length}</div>
+                        <div class="question-text">${question.question}</div>
+                        <div class="answer-options">
+                            ${options}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 選択肢のイベントリスナーを追加
+            const answerOptions = elements.questionnaireContent.querySelectorAll('.answer-option');
+            answerOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    // 他の選択肢の選択を解除
+                    answerOptions.forEach(opt => opt.classList.remove('selected'));
+                    // 現在の選択肢を選択
+                    option.classList.add('selected');
+                    // 回答を保存
+                    questionnaireAnswers[question.id] = option.dataset.value;
+                    updateNextButton();
+                });
+            });
+
+            // 既存の回答があれば復元
+            if (questionnaireAnswers[question.id]) {
+                const selectedOption = elements.questionnaireContent.querySelector(`[data-value="${questionnaireAnswers[question.id]}"]`);
+                if (selectedOption) {
+                    selectedOption.classList.add('selected');
+                }
+            }
+        }
+
+        function renderTextQuestion(question, index) {
+            elements.questionnaireContent.innerHTML = `
+                <div class="questionnaire-body">
+                    <div class="question-container">
+                        <div class="question-number">質問 ${index + 1} / ${questionnaire.length}</div>
+                        <div class="question-text">${question.question}</div>
+                        <input type="text" class="form-input-large" id="text-answer" 
+                               placeholder="${question.placeholder || ''}" 
+                               value="${questionnaireAnswers[question.id] || ''}">
+                    </div>
+                </div>
+            `;
+
+            const textInput = document.getElementById('text-answer');
+            textInput.addEventListener('input', () => {
+                questionnaireAnswers[question.id] = textInput.value;
+                updateNextButton();
+            });
+        }
+
+        function updateNextButton() {
+            const currentQuestion = questionnaire[currentQuestionIndex];
+            const hasAnswer = questionnaireAnswers[currentQuestion.id];
+            
+            if (currentQuestion.type === 'choice') {
+                elements.btnNextQuestion.disabled = !hasAnswer;
+            } else if (currentQuestion.type === 'text') {
+                // テキスト質問は任意回答なので常に有効
+                elements.btnNextQuestion.disabled = false;
+            }
+        }
+
+        function nextQuestion() {
+            if (currentQuestionIndex < questionnaire.length - 1) {
+                currentQuestionIndex++;
+                showQuestion(currentQuestionIndex);
+            } else {
+                // 最後の質問の場合、KPIツリーを生成
+                generateKPITree();
+            }
+        }
+
+        function prevQuestion() {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion(currentQuestionIndex);
+            }
+        }
+
+        function generateKPITree() {
+            // 質問モーダルを隠して生成中画面を表示
+            elements.questionnaireModal.classList.add('hidden');
+            elements.generatingModal.classList.remove('hidden');
+
+            // 生成ステップのアニメーション
+            setTimeout(() => {
+                document.getElementById('step-generate').classList.remove('active');
+                document.getElementById('step-generate').classList.add('completed');
+                document.getElementById('step-complete').classList.add('active');
+                
+                setTimeout(() => {
+                    document.getElementById('step-complete').classList.remove('active');
+                    document.getElementById('step-complete').classList.add('completed');
+                    
+                    // 実際のKPIツリー生成
+                    const generatedTree = createKPITreeFromAnswers(questionnaireAnswers);
+                    
+                    setTimeout(() => {
+                        elements.generatingModal.classList.add('hidden');
+                        displayGeneratedTree(generatedTree);
+                    }, 1000);
+                }, 1500);
+            }, 2000);
+        }
+
+        function createKPITreeFromAnswers(answers) {
+            // 回答に基づいてKPIツリーを生成
+            const businessType = answers.business_type;
+            const primaryGoal = answers.primary_goal;
+            const companyStage = answers.company_stage;
+            
+            // ビジネスタイプに基づく基本構造
+            const treeTemplates = {
+                ecommerce: {
+                    root: { name: '売上', description: 'Eコマースの総売上' },
+                    level1: [
+                        { name: '顧客数', description: '購入顧客の総数' },
+                        { name: '顧客単価', description: '顧客あたりの平均購入金額' }
+                    ]
+                },
+                saas: {
+                    root: { name: 'ARR', description: '年間経常収益' },
+                    level1: [
+                        { name: '新規顧客数', description: '新規獲得顧客数' },
+                        { name: 'ARPU', description: '顧客あたり平均収益' },
+                        { name: '継続率', description: '顧客継続率' }
+                    ]
+                },
+                retail: {
+                    root: { name: '売上', description: '店舗総売上' },
+                    level1: [
+                        { name: '来店客数', description: '店舗への来客数' },
+                        { name: '客単価', description: '1回あたりの購入金額' }
+                    ]
+                },
+                service: {
+                    root: { name: '売上', description: 'サービス売上' },
+                    level1: [
+                        { name: 'クライアント数', description: '契約クライアント数' },
+                        { name: 'プロジェクト単価', description: '1プロジェクトあたりの単価' }
+                    ]
+                },
+                manufacturing: {
+                    root: { name: '売上', description: '製品売上' },
+                    level1: [
+                        { name: '生産量', description: '製品生産数' },
+                        { name: '製品単価', description: '製品あたりの平均単価' }
+                    ]
+                },
+                other: {
+                    root: { name: '売上', description: 'ビジネス売上' },
+                    level1: [
+                        { name: '顧客数', description: '顧客の総数' },
+                        { name: '顧客単価', description: '顧客あたりの平均単価' }
+                    ]
+                }
+            };
+
+            const template = treeTemplates[businessType] || treeTemplates.other;
+            
+            // 主要目標に基づく調整
+            if (primaryGoal === 'customer_acquisition') {
+                template.level1.unshift({ name: 'リード数', description: '見込み顧客数' });
+            } else if (primaryGoal === 'efficiency') {
+                template.level1.push({ name: '利益率', description: '売上利益率' });
+            }
+
+            return template;
+        }
+
+        function displayGeneratedTree(treeTemplate) {
+            // 生成されたテンプレートからKPIツリーを構築
+            const rootNode = {
+                id: 'root',
+                name: treeTemplate.root.name,
+                level: 0,
+                x: 400,
+                y: 100,
+                children: [],
+                description: treeTemplate.root.description
+            };
+
+            const nodes = { root: rootNode };
+
+            // レベル1のノードを追加
+            treeTemplate.level1.forEach((kpi, index) => {
+                const childId = `node-level1-${index}`;
+                const childNode = {
+                    id: childId,
+                    name: kpi.name,
+                    level: 1,
+                    x: 200 + (index * 250),
+                    y: 250,
+                    children: [],
+                    parent: 'root',
+                    description: kpi.description
+                };
+                
+                nodes[childId] = childNode;
+                rootNode.children.push(childId);
+            });
+
+            kpiTree = {
+                id: 'generated-tree',
+                name: 'AI生成KPIツリー',
+                nodes: nodes,
+                rootNodeId: 'root'
+            };
+
+            selectedNode = rootNode;
+            isQuestionnairMode = false;
+            
+            renderTree();
+            showHints();
+            
+            elements.treeName.textContent = kpiTree.name;
+            elements.btnSettings.disabled = false;
         }
 
         // KPIツリー操作関数
@@ -1357,7 +2070,7 @@
         // イベントリスナーの設定
         function setupEventListeners() {
             // ボタンイベント
-            elements.btnAddRoot.addEventListener('click', addRootNode);
+            elements.btnAddRoot.addEventListener('click', startQuestionnaire);
             elements.btnSettings.addEventListener('click', showValueModal);
             elements.closeHints.addEventListener('click', () => elements.hintPanel.classList.add('hidden'));
             elements.closeModal.addEventListener('click', hideValueModal);
@@ -1419,6 +2132,16 @@
                 if (e.target === elements.valueModal) {
                     hideValueModal();
                 }
+            });
+
+            // 質問フローのイベントリスナー
+            elements.btnNextQuestion.addEventListener('click', nextQuestion);
+            elements.btnPrevQuestion.addEventListener('click', prevQuestion);
+            
+            // 質問モーダルのオーバーレイクリック（閉じない）
+            elements.questionnaireModal.addEventListener('click', (e) => {
+                // モーダル内容以外をクリックしても閉じない（質問回答を促すため）
+                e.stopPropagation();
             });
         }
 
