@@ -964,6 +964,18 @@
                         <div class="step-text">ツリーを表示</div>
                     </div>
                 </div>
+                
+                <div style="text-align: center; margin-top: 2rem;">
+                    <button id="btn-skip-generation" style="
+                        padding: 0.5rem 1rem;
+                        border: 1px solid #e2e8f0;
+                        background-color: white;
+                        color: #64748b;
+                        border-radius: 0.375rem;
+                        cursor: pointer;
+                        font-size: 0.875rem;
+                    ">スキップして手動作成</button>
+                </div>
             </div>
         </div>
     </div>
@@ -1505,7 +1517,10 @@
             aiStatus: document.getElementById('ai-status'),
             aiStatusText: document.getElementById('ai-status-text'),
             btnAiCancel: document.getElementById('btn-ai-cancel'),
-            btnAiSave: document.getElementById('btn-ai-save')
+            btnAiSave: document.getElementById('btn-ai-save'),
+            
+            // 生成スキップボタン
+            btnSkipGeneration: document.getElementById('btn-skip-generation')
         };
 
         // ユーティリティ関数
@@ -1798,13 +1813,23 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
 
             // 生成ステップのアニメーション
             setTimeout(() => {
-                document.getElementById('step-generate').classList.remove('active');
-                document.getElementById('step-generate').classList.add('completed');
-                document.getElementById('step-complete').classList.add('active');
+                const stepGenerate = document.getElementById('step-generate');
+                const stepComplete = document.getElementById('step-complete');
+                
+                if (stepGenerate) {
+                    stepGenerate.classList.remove('active');
+                    stepGenerate.classList.add('completed');
+                }
+                
+                if (stepComplete) {
+                    stepComplete.classList.add('active');
+                }
                 
                 setTimeout(() => {
-                    document.getElementById('step-complete').classList.remove('active');
-                    document.getElementById('step-complete').classList.add('completed');
+                    if (stepComplete) {
+                        stepComplete.classList.remove('active');
+                        stepComplete.classList.add('completed');
+                    }
                     
                     // 実際のKPIツリー生成
                     const generatedTree = createKPITreeFromAnswers(questionnaireAnswers);
@@ -1812,9 +1837,9 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
                     setTimeout(() => {
                         elements.generatingModal.classList.add('hidden');
                         displayGeneratedTree(generatedTree);
-                    }, 1000);
-                }, 1500);
-            }, 2000);
+                    }, 800);
+                }, 1200);
+            }, 1500);
         }
 
         function createKPITreeFromAnswers(answers) {
@@ -1883,52 +1908,60 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
         }
 
         function displayGeneratedTree(treeTemplate) {
-            // 生成されたテンプレートからKPIツリーを構築
-            const rootNode = {
-                id: 'root',
-                name: treeTemplate.root.name,
-                level: 0,
-                x: 400,
-                y: 100,
-                children: [],
-                description: treeTemplate.root.description
-            };
-
-            const nodes = { root: rootNode };
-
-            // レベル1のノードを追加
-            treeTemplate.level1.forEach((kpi, index) => {
-                const childId = `node-level1-${index}`;
-                const childNode = {
-                    id: childId,
-                    name: kpi.name,
-                    level: 1,
-                    x: 200 + (index * 250),
-                    y: 250,
+            try {
+                // 生成されたテンプレートからKPIツリーを構築
+                const rootNode = {
+                    id: 'root',
+                    name: treeTemplate.root.name,
+                    level: 0,
+                    x: 400,
+                    y: 100,
                     children: [],
-                    parent: 'root',
-                    description: kpi.description
+                    description: treeTemplate.root.description
                 };
+
+                const nodes = { root: rootNode };
+
+                // レベル1のノードを追加
+                treeTemplate.level1.forEach((kpi, index) => {
+                    const childId = `node-level1-${index}`;
+                    const childNode = {
+                        id: childId,
+                        name: kpi.name,
+                        level: 1,
+                        x: 200 + (index * 250),
+                        y: 250,
+                        children: [],
+                        parent: 'root',
+                        description: kpi.description
+                    };
+                    
+                    nodes[childId] = childNode;
+                    rootNode.children.push(childId);
+                });
+
+                kpiTree = {
+                    id: 'generated-tree',
+                    name: 'AI生成KPIツリー',
+                    nodes: nodes,
+                    rootNodeId: 'root'
+                };
+
+                selectedNode = rootNode;
+                isQuestionnairMode = false;
                 
-                nodes[childId] = childNode;
-                rootNode.children.push(childId);
-            });
-
-            kpiTree = {
-                id: 'generated-tree',
-                name: 'AI生成KPIツリー',
-                nodes: nodes,
-                rootNodeId: 'root'
-            };
-
-            selectedNode = rootNode;
-            isQuestionnairMode = false;
-            
-            renderTree();
-            showHints();
-            
-            elements.treeName.textContent = kpiTree.name;
-            elements.btnSettings.disabled = false;
+                renderTree();
+                showHints();
+                
+                elements.treeName.textContent = kpiTree.name;
+                elements.btnSettings.disabled = false;
+                
+                console.log('KPIツリー生成完了:', kpiTree);
+            } catch (error) {
+                console.error('KPIツリー生成エラー:', error);
+                // エラー時はデフォルトツリーを表示
+                addRootNode();
+            }
         }
 
         // KPIツリー操作関数
@@ -2399,6 +2432,12 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
                 if (e.target === elements.aiSettingsModal) {
                     hideAISettings();
                 }
+            });
+
+            // 生成スキップボタン
+            elements.btnSkipGeneration.addEventListener('click', () => {
+                elements.generatingModal.classList.add('hidden');
+                addRootNode(); // 手動作成モードで開始
             });
         }
 
