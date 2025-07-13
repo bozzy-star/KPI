@@ -247,21 +247,25 @@
 
         .delete-btn {
             position: absolute;
-            top: -0.5rem;
-            right: -0.5rem;
-            width: 1.2rem;
-            height: 1.2rem;
+            top: 0.5rem;
+            right: 0.5rem;
+            width: 1rem;
+            height: 1rem;
             background-color: #dc2626;
             color: white;
-            border-radius: 50%;
+            border-radius: 0.25rem;
             font-size: 0.7rem;
             border: none;
             cursor: pointer;
-            display: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0.8;
         }
 
-        .node.selected .delete-btn {
-            display: block;
+        .delete-btn:hover {
+            opacity: 1;
+            background-color: #b91c1c;
         }
         
         .hint-panel {
@@ -638,8 +642,8 @@
                 <div class="empty-content">
                     <div class="empty-icon">🌳</div>
                     <h2 class="empty-title">KPIツリーを作成しましょう</h2>
-                    <p class="empty-text">最初のKPIを追加してツリーの構築を開始します</p>
-                    <button class="btn-add-root" id="btn-add-root">ルートKPIを追加</button>
+                    <p class="empty-text">いくつかの質問に回答して、KPIツリーを作成しましょう</p>
+                    <button class="btn-add-root" id="btn-add-root">KPIツリーを作る</button>
                 </div>
             </div>
             <div id="canvas" class="canvas hidden">
@@ -1168,7 +1172,7 @@
                     ${node.formula ? `<div class="node-formula">${node.formula}</div>` : ''}
                 </div>
                 <button class="add-child-btn" title="子KPIを追加">+</button>
-                ${node.id !== 'root' ? '<button class="delete-btn" title="KPIを削除">×</button>' : ''}
+                ${node.id !== 'root' ? '<button class="delete-btn" title="KPIを削除">🗑️</button>' : ''}
             `;
 
             // イベントリスナー
