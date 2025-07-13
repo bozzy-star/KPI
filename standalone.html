@@ -244,6 +244,25 @@
             border: none;
             cursor: pointer;
         }
+
+        .delete-btn {
+            position: absolute;
+            top: -0.5rem;
+            right: -0.5rem;
+            width: 1.2rem;
+            height: 1.2rem;
+            background-color: #dc2626;
+            color: white;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            border: none;
+            cursor: pointer;
+            display: none;
+        }
+
+        .node.selected .delete-btn {
+            display: block;
+        }
         
         .hint-panel {
             width: 320px;
@@ -741,6 +760,14 @@
                     formula: '売上 = 成約数 × 平均契約金額',
                     examples: ['月間成約件数', '新規契約数', 'オーダー数'],
                     category: 'revenue'
+                },
+                {
+                    id: 'profit_margin',
+                    name: '利益率',
+                    description: '売上に対する利益の割合。収益性を測る重要な指標です。',
+                    formula: '利益率 = (売上 - 費用) ÷ 売上',
+                    examples: ['粗利益率', '営業利益率', '純利益率'],
+                    category: 'profitability'
                 }
             ],
             '顧客数': [
@@ -759,6 +786,14 @@
                     formula: '顧客数 = 新規顧客数 + 既存顧客数',
                     examples: ['アクティブユーザー数', '継続契約数', 'リピーター数'],
                     category: 'customer'
+                },
+                {
+                    id: 'retention_rate',
+                    name: '顧客継続率',
+                    description: '既存顧客が継続して利用している割合。顧客ロイヤルティの指標です。',
+                    formula: '継続率 = 継続顧客数 ÷ 期初顧客数',
+                    examples: ['月次継続率', '年次継続率', 'チャーン率'],
+                    category: 'customer'
                 }
             ],
             '成約数': [
@@ -768,6 +803,130 @@
                     description: '顧客に対して行った提案の数。商談機会の創出力を表します。',
                     formula: '成約数 = 提案数 × 提案成約率',
                     examples: ['見積提出数', 'プレゼン実施数', '商談数'],
+                    category: 'marketing'
+                },
+                {
+                    id: 'conversion_rate',
+                    name: '成約率',
+                    description: '提案から成約に至る割合。営業効率を測る重要な指標です。',
+                    formula: '成約率 = 成約数 ÷ 提案数',
+                    examples: ['商談成約率', '見積成約率', 'クロージング率'],
+                    category: 'sales'
+                }
+            ],
+            '顧客単価': [
+                {
+                    id: 'purchase_frequency',
+                    name: '購入頻度',
+                    description: '顧客が一定期間内に購入する回数。リピート性を測る指標です。',
+                    formula: '顧客単価 = 平均注文金額 × 購入頻度',
+                    examples: ['月間購入回数', '年間購入回数', 'リピート率'],
+                    category: 'customer'
+                },
+                {
+                    id: 'average_order_value',
+                    name: '平均注文金額',
+                    description: '1回の注文あたりの平均金額。客単価の基礎となる指標です。',
+                    formula: '顧客単価 = 平均注文金額 × 購入頻度',
+                    examples: ['AOV', '客単価', 'バスケット単価'],
+                    category: 'revenue'
+                }
+            ],
+            '新規顧客数': [
+                {
+                    id: 'leads',
+                    name: 'リード数',
+                    description: '見込み顧客の総数。マーケティング活動の成果を表します。',
+                    formula: '新規顧客数 = リード数 × コンバージョン率',
+                    examples: ['問い合わせ数', '資料請求数', 'セミナー参加者数'],
+                    category: 'marketing'
+                },
+                {
+                    id: 'conversion_from_leads',
+                    name: 'リードコンバージョン率',
+                    description: 'リードから顧客になる割合。マーケティングから営業への効率を表します。',
+                    formula: '新規顧客数 = リード数 × コンバージョン率',
+                    examples: ['MQL to SQL率', 'SQL to Customer率', '全体CV率'],
+                    category: 'sales'
+                }
+            ],
+            'リード数': [
+                {
+                    id: 'website_visitors',
+                    name: 'Webサイト訪問者数',
+                    description: 'Webサイトへの訪問者数。デジタルマーケティングの起点となる指標です。',
+                    formula: 'リード数 = 訪問者数 × リード獲得率',
+                    examples: ['ユニークビジター数', 'セッション数', 'PV数'],
+                    category: 'marketing'
+                },
+                {
+                    id: 'lead_acquisition_rate',
+                    name: 'リード獲得率',
+                    description: 'サイト訪問者がリードになる割合。コンテンツの魅力度を表します。',
+                    formula: 'リード数 = 訪問者数 × リード獲得率',
+                    examples: ['フォーム送信率', 'ダウンロード率', 'メルマガ登録率'],
+                    category: 'marketing'
+                }
+            ],
+            '提案数': [
+                {
+                    id: 'qualified_leads',
+                    name: '有効リード数',
+                    description: '営業活動に値する質の高いリード数。営業効率に直結します。',
+                    formula: '提案数 = 有効リード数 × 提案率',
+                    examples: ['SQL数', 'BANTリード数', 'ホットリード数'],
+                    category: 'sales'
+                },
+                {
+                    id: 'proposal_rate',
+                    name: '提案率',
+                    description: '有効リードから提案に至る割合。営業プロセスの効率を表します。',
+                    formula: '提案数 = 有効リード数 × 提案率',
+                    examples: ['商談化率', 'ニーズヒアリング率', 'デモ実施率'],
+                    category: 'sales'
+                }
+            ],
+            '利益率': [
+                {
+                    id: 'cost_of_sales',
+                    name: '売上原価率',
+                    description: '売上に対する原価の割合。商品・サービスの原価効率を表します。',
+                    formula: '利益率 = 1 - (売上原価率 + 販管費率)',
+                    examples: ['原材料費率', '製造費率', '仕入原価率'],
+                    category: 'cost'
+                },
+                {
+                    id: 'operating_expense_ratio',
+                    name: '販管費率',
+                    description: '売上に対する販売管理費の割合。運営効率を表します。',
+                    formula: '利益率 = 1 - (売上原価率 + 販管費率)',
+                    examples: ['人件費率', '広告費率', '一般管理費率'],
+                    category: 'cost'
+                }
+            ],
+            'Webサイト訪問者数': [
+                {
+                    id: 'organic_traffic',
+                    name: 'オーガニック流入',
+                    description: '検索エンジンからの自然流入。SEO効果を測る指標です。',
+                    formula: '訪問者数 = オーガニック流入 + 有料流入 + その他流入',
+                    examples: ['Google検索流入', 'Yahoo検索流入', 'SEO流入'],
+                    category: 'marketing'
+                },
+                {
+                    id: 'paid_traffic',
+                    name: '有料広告流入',
+                    description: '広告からの流入。広告投資の効果を表します。',
+                    formula: '訪問者数 = オーガニック流入 + 有料流入 + その他流入',
+                    examples: ['Google広告流入', 'Facebook広告流入', 'ディスプレイ広告流入'],
+                    category: 'marketing'
+                },
+                {
+                    id: 'referral_traffic',
+                    name: '参照サイト流入',
+                    description: '他サイトからの流入。外部連携やPR効果を表します。',
+                    formula: '訪問者数 = オーガニック流入 + 有料流入 + その他流入',
+                    examples: ['SNS流入', 'メディア掲載流入', 'パートナーサイト流入'],
                     category: 'marketing'
                 }
             ]
@@ -825,7 +984,14 @@
         }
 
         function getCategoryLabel(category) {
-            const labels = { customer: '顧客', revenue: '売上', marketing: 'マーケ' };
+            const labels = { 
+                customer: '顧客', 
+                revenue: '売上', 
+                marketing: 'マーケ', 
+                sales: '営業',
+                profitability: '収益性',
+                cost: 'コスト'
+            };
             return labels[category] || category;
         }
 
@@ -886,6 +1052,35 @@
             if (!kpiTree || !kpiTree.nodes[nodeId]) return;
             
             Object.assign(kpiTree.nodes[nodeId], updates);
+            renderTree();
+        }
+
+        function deleteNode(nodeId) {
+            if (!kpiTree || !kpiTree.nodes[nodeId] || nodeId === 'root') return;
+            
+            const node = kpiTree.nodes[nodeId];
+            
+            // 子ノードを再帰的に削除
+            if (node.children && node.children.length > 0) {
+                [...node.children].forEach(childId => deleteNode(childId));
+            }
+            
+            // 親ノードから自分を削除
+            if (node.parent && kpiTree.nodes[node.parent]) {
+                const parentNode = kpiTree.nodes[node.parent];
+                parentNode.children = parentNode.children.filter(childId => childId !== nodeId);
+            }
+            
+            // ノードを削除
+            delete kpiTree.nodes[nodeId];
+            
+            // 選択されていたノードが削除された場合
+            if (selectedNode && selectedNode.id === nodeId) {
+                selectedNode = null;
+                elements.hintPanel.classList.add('hidden');
+                elements.btnSettings.disabled = true;
+            }
+            
             renderTree();
         }
 
@@ -973,6 +1168,7 @@
                     ${node.formula ? `<div class="node-formula">${node.formula}</div>` : ''}
                 </div>
                 <button class="add-child-btn" title="子KPIを追加">+</button>
+                ${node.id !== 'root' ? '<button class="delete-btn" title="KPIを削除">×</button>' : ''}
             `;
 
             // イベントリスナー
@@ -988,6 +1184,16 @@
                     addChildNode(node.id, { name });
                 }
             });
+
+            const deleteBtn = nodeDiv.querySelector('.delete-btn');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (confirm(`「${node.name}」とその子KPIを削除しますか？`)) {
+                        deleteNode(node.id);
+                    }
+                });
+            }
 
             return nodeDiv;
         }
