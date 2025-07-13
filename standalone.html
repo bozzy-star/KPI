@@ -993,8 +993,8 @@
                     <input type="password" class="form-input" id="openai-api-key" 
                            placeholder="sk-..." 
                            value="">
-                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
-                        ※ APIキーはブラウザにのみ保存され、外部に送信されません
+                    <div style="font-size: 0.75rem; color: #dc2626; margin-top: 0.5rem; font-weight: 500;">
+                        ⚠️ セキュリティ警告: APIキーはブラウザのローカルストレージに保存されます。他人とのブラウザ共有は避け、定期的にAPIキーをローテーションしてください。
                     </div>
                 </div>
                 
@@ -1022,7 +1022,8 @@
                     <div style="font-size: 0.875rem; color: #0c4a6e;">
                         • KPIヒント生成 1回: 約$0.002-0.005<br>
                         • 月100回使用: 約$0.20-0.50<br>
-                        • 安全のため月額上限設定を推奨
+                        • <strong>必須</strong>: OpenAI Platformで月額上限設定 ($5-10推奨)<br>
+                        • 定期的なAPIキーローテーションを推奨
                     </div>
                 </div>
 
@@ -1596,52 +1597,93 @@
             elements.aiSettingsModal.classList.add('hidden');
         }
 
-        // OpenAI API呼び出し関数
+        // OpenAI API呼び出し関数（修正版：セキュリティとエラーハンドリング強化）
         async function callOpenAI(prompt, maxTokens = 500) {
             if (!openaiApiKey || !aiEnabled) {
                 throw new Error('OpenAI APIが設定されていません');
             }
 
+            // 入力バリデーション
+            if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+                throw new Error('無効なプロンプトです');
+            }
+
+            // APIキーの基本バリデーション
+            if (!openaiApiKey.startsWith('sk-')) {
+                throw new Error('無効なOpenAI APIキー形式です');
+            }
+
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒タイムアウト
+
                 const response = await fetch('https://api.openai.com/v1/chat/completions', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${openaiApiKey}`,
                         'Content-Type': 'application/json',
+                        'User-Agent': 'KPITreeApp/1.0'
                     },
                     body: JSON.stringify({
                         model: 'gpt-3.5-turbo',
                         messages: [
                             {
                                 role: 'system',
-                                content: 'あなたはビジネスKPIの専門家です。日本語で回答してください。KPIの階層構造と関係性について詳しく説明できます。'
+                                content: 'あなたはビジネスKPIの専門家です。日本語で回答してください。KPIの階層構造と関係性について詳しく説明できます。必ず指定されたJSON形式で回答してください。'
                             },
                             {
                                 role: 'user',
-                                content: prompt
+                                content: prompt.trim()
                             }
                         ],
-                        max_tokens: maxTokens,
-                        temperature: 0.7
-                    })
+                        max_tokens: Math.min(Math.max(maxTokens, 100), 1000), // 100-1000の範囲内
+                        temperature: 0.7,
+                        top_p: 1.0,
+                        frequency_penalty: 0.0,
+                        presence_penalty: 0.0
+                    }),
+                    signal: controller.signal
                 });
 
+                clearTimeout(timeoutId);
+
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(`OpenAI API エラー: ${errorData.error?.message || response.statusText}`);
+                    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error?.message || errorMessage;
+                    } catch (parseError) {
+                        // JSONパースエラーは無視
+                    }
+                    throw new Error(`OpenAI API エラー: ${errorMessage}`);
                 }
 
                 const data = await response.json();
-                return data.choices[0].message.content.trim();
+                
+                // レスポンスバリデーション
+                if (!data.choices || data.choices.length === 0) {
+                    throw new Error('APIレスポンスに選択肢がありません');
+                }
+
+                const content = data.choices[0].message?.content;
+                if (!content || typeof content !== 'string') {
+                    throw new Error('無効なAPIレスポンス形式です');
+                }
+
+                return content.trim();
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    throw new Error('API呼び出しがタイムアウトしました');
+                }
                 console.error('OpenAI API call failed:', error);
                 throw error;
             }
         }
 
-        // AIを使ったKPIヒント生成
+        // AIを使ったKPIヒント生成（修正版：タイムアウトとエラーハンドリング強化）
         async function generateAIHints(kpiName, context = {}) {
             if (!aiEnabled || !openaiApiKey) {
+                console.log('AI disabled or no API key, using static hints');
                 return null; // 静的ヒントにフォールバック
             }
 
@@ -1664,24 +1706,44 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
 ビジネスで実際に使われる実用的なKPIを提案してください。
                 `;
 
-                const response = await callOpenAI(prompt, 800);
+                console.log('🤖 AI ヒント生成開始:', kpiName);
                 
-                // JSONパースを試行
+                // タイムアウト付きでAPI呼び出し（5秒に短縮）
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('AI hint generation timeout (5s)')), 5000)
+                );
+                
+                const apiPromise = callOpenAI(prompt, 800);
+                const response = await Promise.race([apiPromise, timeoutPromise]);
+                
+                // JSONパースを試行（エラーハンドリング強化）
                 try {
-                    const hints = JSON.parse(response);
-                    if (Array.isArray(hints)) {
+                    if (!response || typeof response !== 'string') {
+                        throw new Error('Invalid AI response format');
+                    }
+                    
+                    // JSONの前後にあるMarkdownコードブロックを除去
+                    const cleanResponse = response.replace(/```json\s*|```\s*$/g, '').trim();
+                    const hints = JSON.parse(cleanResponse);
+                    
+                    if (Array.isArray(hints) && hints.length > 0) {
                         return hints.map((hint, index) => ({
                             id: `ai-hint-${Date.now()}-${index}`,
-                            ...hint
+                            name: hint.name || `AI KPI ${index + 1}`,
+                            description: hint.description || 'AI生成KPI',
+                            formula: hint.formula || '',
+                            examples: Array.isArray(hint.examples) ? hint.examples : [],
+                            category: hint.category || 'other'
                         }));
                     }
                 } catch (parseError) {
-                    console.warn('AI response parsing failed, falling back to static hints');
+                    console.warn('AI response parsing failed:', parseError.message);
+                    console.log('Raw AI response:', response);
                 }
                 
                 return null; // パースに失敗した場合は静的ヒントにフォールバック
             } catch (error) {
-                console.warn('AI hint generation failed:', error);
+                console.warn('AI hint generation failed:', error.message);
                 return null; // エラー時は静的ヒントにフォールバック
             }
         }
@@ -1811,42 +1873,105 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
             elements.questionnaireModal.classList.add('hidden');
             elements.generatingModal.classList.remove('hidden');
 
-            // 生成ステップのアニメーション
-            setTimeout(() => {
-                const stepGenerate = document.getElementById('step-generate');
-                const stepComplete = document.getElementById('step-complete');
-                
-                if (stepGenerate) {
-                    stepGenerate.classList.remove('active');
-                    stepGenerate.classList.add('completed');
+            // 緊急フォールバック：3秒後に強制完了
+            const emergencyTimeout = setTimeout(() => {
+                console.warn('⚠️ 緊急フォールバック実行：生成タイムアウト');
+                try {
+                    elements.generatingModal.classList.add('hidden');
+                    const fallbackTree = createKPITreeFromAnswers(questionnaireAnswers || {});
+                    displayGeneratedTree(fallbackTree);
+                } catch (fallbackError) {
+                    console.error('フォールバックエラー:', fallbackError);
+                    handleGenerationError('システムエラー');
                 }
-                
-                if (stepComplete) {
-                    stepComplete.classList.add('active');
-                }
-                
+            }, 3000);
+
+            // 生成処理をtry-catchで囲む
+            try {
+                const generatedTree = createKPITreeFromAnswers(questionnaireAnswers);
+                console.log('✅ KPIツリー生成完了:', generatedTree);
+
+                // 生成ステップのアニメーション（修正版：エラーハンドリング追加）
                 setTimeout(() => {
-                    if (stepComplete) {
-                        stepComplete.classList.remove('active');
-                        stepComplete.classList.add('completed');
+                    try {
+                        const stepGenerate = document.getElementById('step-generate');
+                        const stepComplete = document.getElementById('step-complete');
+                        
+                        if (stepGenerate) {
+                            stepGenerate.classList.remove('active');
+                            stepGenerate.classList.add('completed');
+                        }
+                        
+                        if (stepComplete) {
+                            stepComplete.classList.add('active');
+                        }
+                        
+                        setTimeout(() => {
+                            try {
+                                if (stepComplete) {
+                                    stepComplete.classList.remove('active');
+                                    stepComplete.classList.add('completed');
+                                }
+                                
+                                // 実際のKPIツリー生成（エラーハンドリング追加）
+                                const generatedTree = createKPITreeFromAnswers(questionnaireAnswers);
+                                
+                                if (!generatedTree) {
+                                    throw new Error('Failed to generate KPI tree from answers');
+                                }
+                                
+                                // タイムアウト対策：確実に実行されるよう即座に実行
+                                try {
+                                    clearTimeout(emergencyTimeout); // 緊急フォールバックをキャンセル
+                                    console.log('🌳 ツリー表示開始（正常完了）');
+                                    elements.generatingModal.classList.add('hidden');
+                                    displayGeneratedTree(generatedTree);
+                                } catch (displayError) {
+                                    console.error('Error displaying tree:', displayError);
+                                    handleGenerationError('ツリー表示エラー');
+                                }
+                            } catch (treeError) {
+                                console.error('Error in tree generation step:', treeError);
+                                handleGenerationError('ツリー生成エラー');
+                            }
+                        }, 1200);
+                    } catch (animationError) {
+                        console.error('Error in animation step:', animationError);
+                        handleGenerationError('アニメーションエラー');
                     }
-                    
-                    // 実際のKPIツリー生成
-                    const generatedTree = createKPITreeFromAnswers(questionnaireAnswers);
-                    
-                    setTimeout(() => {
-                        elements.generatingModal.classList.add('hidden');
-                        displayGeneratedTree(generatedTree);
-                    }, 800);
-                }, 1200);
-            }, 1500);
+                }, 1500);
+            } catch (error) {
+                console.error('Error starting generation:', error);
+                handleGenerationError('生成開始エラー');
+            }
+        }
+
+        // エラーハンドリング用関数
+        function handleGenerationError(message) {
+            console.log('Handling generation error:', message);
+            elements.generatingModal.classList.add('hidden');
+            
+            // エラーメッセージを表示してから手動作成モードに移行
+            if (confirm(`${message}が発生しました。手動でKPIツリーを作成しますか？`)) {
+                addRootNode();
+            } else {
+                // 質問モーダルに戻る
+                elements.questionnaireModal.classList.remove('hidden');
+            }
         }
 
         function createKPITreeFromAnswers(answers) {
-            // 回答に基づいてKPIツリーを生成
-            const businessType = answers.business_type;
-            const primaryGoal = answers.primary_goal;
-            const companyStage = answers.company_stage;
+            try {
+                // 入力バリデーション
+                if (!answers || typeof answers !== 'object') {
+                    console.warn('Invalid answers object, using default tree');
+                    return createDefaultTree();
+                }
+
+                // 回答に基づいてKPIツリーを生成
+                const businessType = answers.business_type || 'other';
+                const primaryGoal = answers.primary_goal || 'revenue_growth';
+                const companyStage = answers.company_stage || 'growth';
             
             // ビジネスタイプに基づく基本構造
             const treeTemplates = {
@@ -1905,41 +2030,66 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
             }
 
             return template;
+            } catch (error) {
+                console.error('Error creating KPI tree from answers:', error);
+                return createDefaultTree();
+            }
+        }
+
+        // デフォルトツリー作成関数
+        function createDefaultTree() {
+            return {
+                root: { name: '売上', description: 'ビジネスの総売上' },
+                level1: [
+                    { name: '顧客数', description: '購入顧客の総数' },
+                    { name: '顧客単価', description: '顧客あたりの平均購入金額' }
+                ]
+            };
         }
 
         function displayGeneratedTree(treeTemplate) {
             try {
+                // 入力バリデーション
+                if (!treeTemplate || !treeTemplate.root || !treeTemplate.level1) {
+                    throw new Error('無効なツリーテンプレートです');
+                }
+
                 // 生成されたテンプレートからKPIツリーを構築
                 const rootNode = {
                     id: 'root',
-                    name: treeTemplate.root.name,
+                    name: treeTemplate.root.name || 'メインKPI',
                     level: 0,
                     x: 400,
                     y: 100,
                     children: [],
-                    description: treeTemplate.root.description
+                    description: treeTemplate.root.description || 'AI生成されたメインKPI'
                 };
 
                 const nodes = { root: rootNode };
 
-                // レベル1のノードを追加
-                treeTemplate.level1.forEach((kpi, index) => {
+                // レベル1のノードを追加（最大10個まで）
+                const maxLevel1Nodes = Math.min(treeTemplate.level1.length, 10);
+                for (let index = 0; index < maxLevel1Nodes; index++) {
+                    const kpi = treeTemplate.level1[index];
+                    if (!kpi || !kpi.name) continue; // 無効なKPIはスキップ
+                    
                     const childId = `node-level1-${index}`;
                     const childNode = {
                         id: childId,
                         name: kpi.name,
                         level: 1,
-                        x: 200 + (index * 250),
+                        x: Math.max(50, 200 + (index * 250)), // 最小値を保証
                         y: 250,
                         children: [],
                         parent: 'root',
-                        description: kpi.description
+                        description: kpi.description || `${kpi.name}の説明`
                     };
                     
                     nodes[childId] = childNode;
                     rootNode.children.push(childId);
-                });
+                }
 
+                // KPIツリーオブジェクトを作成
                 kpiTree = {
                     id: 'generated-tree',
                     name: 'AI生成KPIツリー',
@@ -1950,8 +2100,13 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
                 selectedNode = rootNode;
                 isQuestionnairMode = false;
                 
+                // UI更新
                 renderTree();
-                showHints();
+                
+                // ヒント表示（エラーハンドリング付き）
+                showHints().catch(error => {
+                    console.warn('Hints display failed:', error);
+                });
                 
                 elements.treeName.textContent = kpiTree.name;
                 elements.btnSettings.disabled = false;
@@ -2167,59 +2322,107 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
             return nodeDiv;
         }
 
-        // ヒントパネル関数
+        // ヒントパネル関数（修正版：無限ループ防止とエラーハンドリング強化）
         async function showHints() {
             if (!selectedNode) {
                 elements.hintPanel.classList.add('hidden');
                 return;
             }
 
-            elements.hintPanel.classList.remove('hidden');
-            elements.selectedNodeName.textContent = selectedNode.name;
-            elements.selectedNodeDesc.textContent = selectedNode.description || '';
-            elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補:`;
+            try {
+                elements.hintPanel.classList.remove('hidden');
+                elements.selectedNodeName.textContent = selectedNode.name || 'Unknown KPI';
+                elements.selectedNodeDesc.textContent = selectedNode.description || '';
+                elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補:`;
 
-            // 静的ヒント
-            const staticHints = kpiHints[selectedNode.name] || [];
-            
-            // AIヒントを試行（設定されている場合）
-            let aiHints = null;
-            if (aiEnabled && openaiApiKey) {
-                try {
-                    elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補: 🤖 AI分析中...`;
-                    
-                    const context = questionnaireAnswers ? {
-                        businessType: questionnaireAnswers.business_type
-                    } : {};
-                    
-                    aiHints = await generateAIHints(selectedNode.name, context);
-                } catch (error) {
-                    console.warn('AI hint generation failed, using static hints:', error);
+                // 静的ヒント
+                const staticHints = kpiHints[selectedNode.name] || [];
+                
+                // まず静的ヒントを表示（ローディング状態を避ける）
+                renderHints(staticHints);
+                
+                // AIヒントを試行（設定されている場合）
+                let aiHints = null;
+                if (aiEnabled && openaiApiKey && selectedNode.name) {
+                    try {
+                        elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補: 🤖 AI分析中...`;
+                        
+                        const context = questionnaireAnswers ? {
+                            businessType: questionnaireAnswers.business_type
+                        } : {};
+                        
+                        aiHints = await generateAIHints(selectedNode.name, context);
+                        
+                        // AI生成成功時のみ表示を更新
+                        if (aiHints && Array.isArray(aiHints) && aiHints.length > 0) {
+                            elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補: 🤖 AI生成`;
+                            renderHints(aiHints);
+                        } else {
+                            // AI失敗時は静的ヒントにフォールバック
+                            elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補:`;
+                            renderHints(staticHints);
+                        }
+                    } catch (error) {
+                        console.warn('AI hint generation failed, using static hints:', error);
+                        elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補:`;
+                        renderHints(staticHints);
+                    }
                 }
+            } catch (error) {
+                console.error('Error in showHints:', error);
+                // エラー時は最低限のUI表示
+                elements.hintsSubtitle.textContent = 'ヒント読み込みエラー';
+                renderHints([]);
             }
-
-            // AIヒントが取得できた場合はそれを使用、そうでなければ静的ヒント
-            const hints = aiHints || staticHints;
-            elements.hintsSubtitle.textContent = `「${selectedNode.name}」の下位KPI候補:${aiHints ? ' 🤖 AI生成' : ''}`;
-            
-            renderHints(hints);
         }
 
         function renderHints(hints) {
-            const container = elements.hintsList;
-            container.innerHTML = '';
+            try {
+                const container = elements.hintsList;
+                if (!container) {
+                    console.error('Hints container not found');
+                    return;
+                }
+                
+                // 既存のコンテンツをクリア
+                container.innerHTML = '';
 
-            if (hints.length === 0) {
-                elements.noHints.classList.remove('hidden');
-                return;
+                // ヒントが空の場合
+                if (!hints || !Array.isArray(hints) || hints.length === 0) {
+                    if (elements.noHints) {
+                        elements.noHints.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                if (elements.noHints) {
+                    elements.noHints.classList.add('hidden');
+                }
+
+                // 無限ループ防止：最大10個まで表示
+                const maxHints = Math.min(hints.length, 10);
+                
+                for (let i = 0; i < maxHints; i++) {
+                    try {
+                        const hint = hints[i];
+                        if (hint && typeof hint === 'object') {
+                            const hintElement = createHintElement(hint);
+                            if (hintElement) {
+                                container.appendChild(hintElement);
+                            }
+                        }
+                    } catch (hintError) {
+                        console.warn(`Error creating hint element ${i}:`, hintError);
+                        // 個別のヒント作成エラーは無視して続行
+                    }
+                }
+            } catch (error) {
+                console.error('Error in renderHints:', error);
+                // エラー時は「no hints」状態にフォールバック
+                if (elements.noHints) {
+                    elements.noHints.classList.remove('hidden');
+                }
             }
-
-            elements.noHints.classList.add('hidden');
-
-            hints.forEach(hint => {
-                const hintElement = createHintElement(hint);
-                container.appendChild(hintElement);
-            });
         }
 
         function createHintElement(hint) {
@@ -2247,8 +2450,23 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
             `;
 
             hintDiv.addEventListener('click', () => {
-                selectedHintId = selectedHintId === hint.id ? null : hint.id;
-                renderHints(kpiHints[selectedNode.name] || []);
+                try {
+                    selectedHintId = selectedHintId === hint.id ? null : hint.id;
+                    // 無限ループ防止：現在表示されているヒントリストを再利用
+                    const currentHints = Array.from(elements.hintsList.children).map((_, index) => {
+                        // 現在のヒントデータを保持
+                        return kpiHints[selectedNode?.name]?.[index] || staticHints[index];
+                    }).filter(Boolean);
+                    
+                    if (currentHints.length > 0) {
+                        renderHints(currentHints);
+                    } else {
+                        // フォールバック：静的ヒントを使用
+                        renderHints(kpiHints[selectedNode?.name] || []);
+                    }
+                } catch (error) {
+                    console.warn('Error handling hint click:', error);
+                }
             });
 
             if (isSelected) {
@@ -2341,104 +2559,165 @@ KPI「${kpiName}」の下層KPIとして適切な指標を3-5個提案してく�
             }
         }
 
-        // イベントリスナーの設定
+        // イベントリスナーの設定（修正版：メモリリーク防止とエラーハンドリング強化）
+        let eventListenersSetup = false; // 重複登録防止フラグ
+        
         function setupEventListeners() {
-            // ボタンイベント
-            elements.btnAddRoot.addEventListener('click', startQuestionnaire);
-            elements.btnSettings.addEventListener('click', showValueModal);
-            elements.btnAiSettings.addEventListener('click', showAISettings);
-            elements.closeHints.addEventListener('click', () => elements.hintPanel.classList.add('hidden'));
-            elements.closeModal.addEventListener('click', hideValueModal);
-            elements.btnManualAdd.addEventListener('click', () => {
-                const name = prompt('KPI名を入力してください:');
-                if (name) {
-                    addChildNode(selectedNode.id, { name });
-                }
-            });
-
-            // モーダルイベント
-            elements.btnCalculation.addEventListener('click', showCalculationForm);
-            elements.btnBack.addEventListener('click', showValueForm);
-            elements.btnCancel.addEventListener('click', hideValueModal);
-            elements.btnSave.addEventListener('click', () => {
-                updateNode(selectedNode.id, {
-                    target: parseFloat(elements.targetInput.value) || undefined,
-                    value: parseFloat(elements.valueInput.value) || undefined,
-                    unit: elements.unitInput.value || undefined
-                });
-                hideValueModal();
-            });
-
-            // 計算フォームイベント
-            elements.parentValue.addEventListener('input', (e) => {
-                calculationData.parentValue = e.target.value;
-                updateCalculateButton();
-            });
-            elements.childEstimate.addEventListener('input', (e) => {
-                calculationData.childEstimate = e.target.value;
-                updateCalculateButton();
-            });
-            elements.btnCalculate.addEventListener('click', calculateValue);
-
-            // 数値入力フォームイベント
-            elements.targetInput.addEventListener('input', (e) => {
-                if (selectedNode) {
-                    updateNode(selectedNode.id, { target: parseFloat(e.target.value) || undefined });
-                }
-            });
-            elements.valueInput.addEventListener('input', (e) => {
-                if (selectedNode) {
-                    updateNode(selectedNode.id, { value: parseFloat(e.target.value) || undefined });
-                }
-            });
-            elements.unitInput.addEventListener('input', (e) => {
-                if (selectedNode) {
-                    updateNode(selectedNode.id, { unit: e.target.value || undefined });
-                }
-            });
-
-            // ドラッグイベント
-            elements.canvas.addEventListener('mousemove', handleMouseMove);
-            elements.canvas.addEventListener('mouseup', handleMouseUp);
-            elements.canvas.addEventListener('mouseleave', handleMouseUp);
-
-            // モーダルオーバーレイクリック
-            elements.valueModal.addEventListener('click', (e) => {
-                if (e.target === elements.valueModal) {
-                    hideValueModal();
-                }
-            });
-
-            // 質問フローのイベントリスナー
-            elements.btnNextQuestion.addEventListener('click', nextQuestion);
-            elements.btnPrevQuestion.addEventListener('click', prevQuestion);
+            if (eventListenersSetup) {
+                console.warn('Event listeners already setup, skipping...');
+                return;
+            }
             
-            // 質問モーダルのオーバーレイクリック（閉じない）
-            elements.questionnaireModal.addEventListener('click', (e) => {
-                // モーダル内容以外をクリックしても閉じない（質問回答を促すため）
-                e.stopPropagation();
-            });
+            try {
+                // ボタンイベント
+                elements.btnAddRoot?.addEventListener('click', startQuestionnaire);
+                elements.btnSettings?.addEventListener('click', showValueModal);
+                elements.btnAiSettings?.addEventListener('click', showAISettings);
+                elements.closeHints?.addEventListener('click', () => elements.hintPanel?.classList.add('hidden'));
+                elements.closeModal?.addEventListener('click', hideValueModal);
+                elements.btnManualAdd?.addEventListener('click', () => {
+                    try {
+                        const name = prompt('KPI名を入力してください:');
+                        if (name && name.trim() && selectedNode) {
+                            addChildNode(selectedNode.id, { name: name.trim() });
+                        }
+                    } catch (error) {
+                        console.error('Error adding manual KPI:', error);
+                        alert('KPI追加エラーが発生しました');
+                    }
+                });
 
-            // AI設定のイベントリスナー
-            elements.closeAiModal.addEventListener('click', hideAISettings);
-            elements.btnAiCancel.addEventListener('click', hideAISettings);
-            elements.btnAiSave.addEventListener('click', () => {
-                saveAISettings();
-                hideAISettings();
-            });
+                // モーダルイベント
+                elements.btnCalculation?.addEventListener('click', showCalculationForm);
+                elements.btnBack?.addEventListener('click', showValueForm);
+                elements.btnCancel?.addEventListener('click', hideValueModal);
+                elements.btnSave?.addEventListener('click', () => {
+                    try {
+                        if (selectedNode) {
+                            const target = elements.targetInput?.value ? parseFloat(elements.targetInput.value) : undefined;
+                            const value = elements.valueInput?.value ? parseFloat(elements.valueInput.value) : undefined;
+                            const unit = elements.unitInput?.value?.trim() || undefined;
+                            
+                            updateNode(selectedNode.id, { target, value, unit });
+                            hideValueModal();
+                        }
+                    } catch (error) {
+                        console.error('Error saving node values:', error);
+                        alert('数値保存エラーが発生しました');
+                    }
+                });
 
-            // AI設定モーダルのオーバーレイクリック
-            elements.aiSettingsModal.addEventListener('click', (e) => {
-                if (e.target === elements.aiSettingsModal) {
-                    hideAISettings();
-                }
-            });
+                // 計算フォームイベント
+                elements.parentValue?.addEventListener('input', (e) => {
+                    try {
+                        calculationData.parentValue = e.target.value;
+                        updateCalculateButton();
+                    } catch (error) {
+                        console.warn('Error handling parent value input:', error);
+                    }
+                });
+                elements.childEstimate?.addEventListener('input', (e) => {
+                    try {
+                        calculationData.childEstimate = e.target.value;
+                        updateCalculateButton();
+                    } catch (error) {
+                        console.warn('Error handling child estimate input:', error);
+                    }
+                });
+                elements.btnCalculate?.addEventListener('click', calculateValue);
 
-            // 生成スキップボタン
-            elements.btnSkipGeneration.addEventListener('click', () => {
-                elements.generatingModal.classList.add('hidden');
-                addRootNode(); // 手動作成モードで開始
-            });
+                // 数値入力フォームイベント
+                elements.targetInput?.addEventListener('input', (e) => {
+                    try {
+                        if (selectedNode && e.target.value) {
+                            const target = parseFloat(e.target.value);
+                            if (!isNaN(target)) {
+                                updateNode(selectedNode.id, { target });
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Error updating target:', error);
+                    }
+                });
+                elements.valueInput?.addEventListener('input', (e) => {
+                    try {
+                        if (selectedNode && e.target.value) {
+                            const value = parseFloat(e.target.value);
+                            if (!isNaN(value)) {
+                                updateNode(selectedNode.id, { value });
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('Error updating value:', error);
+                    }
+                });
+                elements.unitInput?.addEventListener('input', (e) => {
+                    try {
+                        if (selectedNode) {
+                            updateNode(selectedNode.id, { unit: e.target.value?.trim() || undefined });
+                        }
+                    } catch (error) {
+                        console.warn('Error updating unit:', error);
+                    }
+                });
+
+                // ドラッグイベント
+                elements.canvas?.addEventListener('mousemove', handleMouseMove);
+                elements.canvas?.addEventListener('mouseup', handleMouseUp);
+                elements.canvas?.addEventListener('mouseleave', handleMouseUp);
+
+                // モーダルオーバーレイクリック
+                elements.valueModal?.addEventListener('click', (e) => {
+                    if (e.target === elements.valueModal) {
+                        hideValueModal();
+                    }
+                });
+
+                // 質問フローのイベントリスナー
+                elements.btnNextQuestion?.addEventListener('click', nextQuestion);
+                elements.btnPrevQuestion?.addEventListener('click', prevQuestion);
+                
+                // 質問モーダルのオーバーレイクリック（閉じない）
+                elements.questionnaireModal?.addEventListener('click', (e) => {
+                    // モーダル内容以外をクリックしても閉じない（質問回答を促すため）
+                    e.stopPropagation();
+                });
+
+                // AI設定のイベントリスナー
+                elements.closeAiModal?.addEventListener('click', hideAISettings);
+                elements.btnAiCancel?.addEventListener('click', hideAISettings);
+                elements.btnAiSave?.addEventListener('click', () => {
+                    try {
+                        saveAISettings();
+                        hideAISettings();
+                    } catch (error) {
+                        console.error('Error saving AI settings:', error);
+                        alert('AI設定保存エラーが発生しました');
+                    }
+                });
+
+                // AI設定モーダルのオーバーレイクリック
+                elements.aiSettingsModal?.addEventListener('click', (e) => {
+                    if (e.target === elements.aiSettingsModal) {
+                        hideAISettings();
+                    }
+                });
+
+                // 生成スキップボタン
+                elements.btnSkipGeneration?.addEventListener('click', () => {
+                    try {
+                        elements.generatingModal?.classList.add('hidden');
+                        addRootNode(); // 手動作成モードで開始
+                    } catch (error) {
+                        console.error('Error skipping generation:', error);
+                    }
+                });
+                
+                eventListenersSetup = true;
+                console.log('Event listeners setup completed');
+            } catch (error) {
+                console.error('Error setting up event listeners:', error);
+            }
         }
 
         function updateCalculateButton() {
